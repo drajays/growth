@@ -1,0 +1,904 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pediatric Growth Chart & Clinical Calculator (Boys & Girls)</title>
+  <meta name="description" content="Interactive clinical growth chart application for pediatric height and weight centiles, standard deviation (SD) scores, height/weight age equivalents, and adult target height prediction.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --primary: #0084ff;
+      --primary-glow: rgba(0, 132, 255, 0.25);
+      --accent: #00d2ff;
+      --bg-gradient: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+      --card-bg: rgba(30, 41, 59, 0.75);
+      --card-border: rgba(255, 255, 255, 0.12);
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --boy-bg: #1e3a5f;
+      --girl-bg: #4a1e3a;
+      --chart-bg-boy: #c9ebf9;
+      --chart-bg-girl: #ffc0cb;
+      --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.3);
+      --radius: 16px;
+      --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Outfit', 'Inter', -apple-system, sans-serif;
+      background: var(--bg-gradient);
+      color: var(--text-main);
+      min-height: 100vh;
+      padding: 2rem 1.5rem;
+      line-height: 1.6;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 2.5rem;
+      max-width: 900px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    header h1 {
+      font-size: 2.4rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, #ffffff 0%, #cbd5e1 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 0.5rem;
+      letter-spacing: -0.02em;
+    }
+
+    header p {
+      color: var(--text-muted);
+      font-size: 1.05rem;
+    }
+
+    .app-container {
+      max-width: 1400px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 360px 1fr;
+      gap: 2rem;
+      align-items: start;
+    }
+
+    @media (max-width: 1024px) {
+      .app-container {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .glass-card {
+      background: var(--card-bg);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius);
+      padding: 1.75rem;
+      box-shadow: var(--shadow-lg);
+    }
+
+    /* Sidebar Controls */
+    .controls-header {
+      font-size: 1.25rem;
+      font-weight: 600;
+      margin-bottom: 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      border-bottom: 1px solid var(--card-border);
+      padding-bottom: 0.75rem;
+    }
+
+    .gender-switcher {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.75rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .gender-btn {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--card-border);
+      color: var(--text-main);
+      padding: 0.75rem;
+      border-radius: 12px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: var(--transition);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+    }
+
+    .gender-btn:hover {
+      background: rgba(255, 255, 255, 0.1);
+      transform: translateY(-2px);
+    }
+
+    .gender-btn.active-boy {
+      background: #0084ff;
+      border-color: #33a1ff;
+      box-shadow: 0 0 20px rgba(0, 132, 255, 0.4);
+    }
+
+    .gender-btn.active-girl {
+      background: #ec4899;
+      border-color: #f472b6;
+      box-shadow: 0 0 20px rgba(236, 72, 153, 0.4);
+    }
+
+    .form-group {
+      margin-bottom: 1.25rem;
+    }
+
+    .form-group label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.9rem;
+      font-weight: 500;
+      color: var(--text-muted);
+      margin-bottom: 0.4rem;
+    }
+
+    .form-group label span {
+      color: var(--text-main);
+      font-weight: 600;
+    }
+
+    .input-wrapper {
+      position: relative;
+    }
+
+    .input-control {
+      width: 100%;
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid var(--card-border);
+      color: var(--text-main);
+      padding: 0.65rem 1rem;
+      border-radius: 10px;
+      font-size: 1rem;
+      font-family: inherit;
+      transition: var(--transition);
+    }
+
+    .input-control:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px var(--primary-glow);
+    }
+
+    .slider-control {
+      width: 100%;
+      margin-top: 0.4rem;
+      accent-color: var(--primary);
+      cursor: pointer;
+    }
+
+    /* Main Content Area */
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 1.25rem;
+      margin-bottom: 1.5rem;
+    }
+
+    @media (max-width: 640px) {
+      .dashboard-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .metric-card {
+      background: rgba(15, 23, 42, 0.45);
+      border: 1px solid var(--card-border);
+      border-radius: 14px;
+      padding: 1.25rem;
+      transition: var(--transition);
+    }
+
+    .metric-card:hover {
+      border-color: rgba(255, 255, 255, 0.25);
+      transform: translateY(-2px);
+    }
+
+    .metric-title {
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      margin-bottom: 0.75rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .metric-item {
+      margin-bottom: 0.6rem;
+    }
+
+    .metric-item:last-child {
+      margin-bottom: 0;
+    }
+
+    .metric-label {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+    }
+
+    .metric-value {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 0.2rem 0.6rem;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      margin-left: 0.5rem;
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    /* Chart Area */
+    .chart-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.25rem;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+
+    .chart-title {
+      font-size: 1.35rem;
+      font-weight: 600;
+    }
+
+    .btn-export {
+      background: linear-gradient(135deg, #0084ff 0%, #00d2ff 100%);
+      color: #ffffff;
+      border: none;
+      padding: 0.65rem 1.25rem;
+      border-radius: 10px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      transition: var(--transition);
+      box-shadow: 0 4px 15px rgba(0, 132, 255, 0.3);
+    }
+
+    .btn-export:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(0, 132, 255, 0.5);
+    }
+
+    .chart-wrapper {
+      position: relative;
+      height: 680px;
+      width: 100%;
+      background: #ffffff;
+      border-radius: 12px;
+      padding: 1.5rem;
+      box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.05);
+    }
+
+    @media (max-width: 768px) {
+      .chart-wrapper {
+        height: 500px;
+        padding: 0.75rem;
+      }
+    }
+
+    /* Footer */
+    footer {
+      text-align: center;
+      margin-top: 3rem;
+      color: var(--text-muted);
+      font-size: 0.9rem;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>Pediatric Growth Chart & Clinical Calculator</h1>
+    <p>Comprehensive pediatric centile evaluation, Z-score computation, age equivalents, and target height prediction.</p>
+  </header>
+
+  <main class="app-container">
+    
+    <!-- Sidebar Controls -->
+    <aside class="glass-card" aria-label="Patient Parameters">
+      <div class="controls-header">
+        <span>⚙️ Patient Parameters</span>
+      </div>
+
+      <div class="gender-switcher" role="group" aria-label="Gender selection">
+        <button type="button" id="btn-boy" class="gender-btn active-boy" onclick="setGender('Boys')">
+          👦 Boys
+        </button>
+        <button type="button" id="btn-girl" class="gender-btn" onclick="setGender('Girls')">
+          👧 Girls
+        </button>
+      </div>
+
+      <form id="calc-form" onsubmit="return false;">
+        <div class="form-group">
+          <label for="input-age">Patient Age (years) <span id="val-age">10.0 yrs</span></label>
+          <input type="number" id="input-age" class="input-control" min="5" max="18" step="0.5" value="10.0">
+          <input type="range" id="slider-age" class="slider-control" min="5" max="18" step="0.5" value="10.0">
+        </div>
+
+        <div class="form-group">
+          <label for="input-height">Patient Height (cm) <span id="val-height">135 cm</span></label>
+          <input type="number" id="input-height" class="input-control" min="60" max="200" step="1" value="135">
+          <input type="range" id="slider-height" class="slider-control" min="60" max="200" step="1" value="135">
+        </div>
+
+        <div class="form-group">
+          <label for="input-weight">Patient Weight (kg) <span id="val-weight">30 kg</span></label>
+          <input type="number" id="input-weight" class="input-control" min="15" max="140" step="1" value="30">
+          <input type="range" id="slider-weight" class="slider-control" min="15" max="140" step="1" value="30">
+        </div>
+
+        <div class="form-group">
+          <label for="input-father">Father's Height (cm) <span id="val-father">170 cm</span></label>
+          <input type="number" id="input-father" class="input-control" min="100" max="200" step="1" value="170">
+          <input type="range" id="slider-father" class="slider-control" min="100" max="200" step="1" value="170">
+        </div>
+
+        <div class="form-group">
+          <label for="input-mother">Mother's Height (cm) <span id="val-mother">158 cm</span></label>
+          <input type="number" id="input-mother" class="input-control" min="100" max="200" step="1" value="158">
+          <input type="range" id="slider-mother" class="slider-control" min="100" max="200" step="1" value="158">
+        </div>
+      </form>
+    </aside>
+
+    <!-- Main Results & Chart Section -->
+    <section class="glass-card">
+      
+      <!-- Metrics Dashboard -->
+      <div class="dashboard-grid">
+        <div class="metric-card">
+          <div class="metric-title">📊 Standard Deviation (Z) Scores</div>
+          <div class="metric-item">
+            <div class="metric-label">Height SD Score:</div>
+            <div class="metric-value" id="res-height-sd">+0.00 SD</div>
+          </div>
+          <div class="metric-item">
+            <div class="metric-label">Weight SD Score:</div>
+            <div class="metric-value" id="res-weight-sd">+0.00 SD</div>
+          </div>
+        </div>
+
+        <div class="metric-card">
+          <div class="metric-title">📈 Centile Ranges</div>
+          <div class="metric-item">
+            <div class="metric-label">Height Centile Range:</div>
+            <div class="metric-value" id="res-height-centile">between 25th and 50th centile</div>
+          </div>
+          <div class="metric-item">
+            <div class="metric-label">Weight Centile Range:</div>
+            <div class="metric-value" id="res-weight-centile">between 25th and 50th centile</div>
+          </div>
+        </div>
+
+        <div class="metric-card">
+          <div class="metric-title">⏳ Calculated Age Equivalents</div>
+          <div class="metric-item">
+            <div class="metric-label">Height Age (50th percentile match):</div>
+            <div class="metric-value" id="res-height-age">10.0 years</div>
+          </div>
+          <div class="metric-item">
+            <div class="metric-label">Weight Age (50th percentile match):</div>
+            <div class="metric-value" id="res-weight-age">10.0 years</div>
+          </div>
+        </div>
+
+        <div class="metric-card">
+          <div class="metric-title">🧬 Adult Height Predictions</div>
+          <div class="metric-item">
+            <div class="metric-label">Mid-Parental Height (MPH):</div>
+            <div class="metric-value" id="res-mph">170.5 cm</div>
+          </div>
+          <div class="metric-item">
+            <div class="metric-label">Target Height (TH @ 18 yrs):</div>
+            <div class="metric-value" id="res-th">172.0 cm</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Growth Chart Display -->
+      <div class="chart-header">
+        <div class="chart-title" id="chart-main-title">Growth Chart for Boys (Height & Weight)</div>
+        <button type="button" class="btn-export" onclick="exportA4Chart()">
+          ⬇️ Download Growth Chart (A4 High-Res PNG)
+        </button>
+      </div>
+
+      <div class="chart-wrapper">
+        <canvas id="growthChart"></canvas>
+      </div>
+
+    </section>
+
+  </main>
+
+  <footer>
+    <p>Pediatric Growth Chart & Clinical Calculator — Standardized Data based on 3rd–97th Centiles & SD evaluation.</p>
+  </footer>
+
+  <script>
+    // Raw Datasets exactly from Python app
+    const boys_height_data = [
+      {Age:5.0, c3:99.0, c10:102.3, c25:105.6, c50:108.9, c75:112.4, c90:115.9, c97:119.4, SD:5.7},
+      {Age:5.5, c3:101.6, c10:105.0, c25:108.4, c50:111.9, c75:115.4, c90:119.0, c97:122.7, SD:5.3},
+      {Age:6.0, c3:104.2, c10:107.7, c25:111.2, c50:114.8, c75:118.5, c90:122.2, c97:126.0, SD:5.6},
+      {Age:6.5, c3:106.8, c10:110.4, c25:114.0, c50:117.8, c75:121.6, c90:125.4, c97:129.3, SD:5.5},
+      {Age:7.0, c3:109.3, c10:113.0, c25:116.8, c50:120.7, c75:124.6, c90:128.6, c97:132.6, SD:5.9},
+      {Age:7.5, c3:111.8, c10:115.7, c25:119.6, c50:123.5, c75:127.6, c90:131.7, c97:135.9, SD:5.7},
+      {Age:8.0, c3:114.3, c10:118.2, c25:122.3, c50:126.4, c75:130.5, c90:134.8, c97:139.1, SD:6.3},
+      {Age:8.5, c3:116.7, c10:120.8, c25:124.9, c50:129.1, c75:133.4, c90:137.8, c97:142.2, SD:6.1},
+      {Age:9.0, c3:119.0, c10:123.2, c25:127.5, c50:131.8, c75:136.3, c90:140.7, c97:145.3, SD:6.4},
+      {Age:9.5, c3:121.3, c10:125.6, c25:130.0, c50:134.5, c75:139.1, c90:143.7, c97:148.3, SD:6.4},
+      {Age:10.0, c3:123.6, c10:128.1, c25:132.6, c50:137.2, c75:141.9, c90:146.6, c97:151.4, SD:6.8},
+      {Age:10.5, c3:125.9, c10:130.5, c25:135.2, c50:139.9, c75:144.7, c90:149.5, c97:154.4, SD:6.5},
+      {Age:11.0, c3:128.2, c10:133.0, c25:137.8, c50:142.7, c75:147.6, c90:152.5, c97:157.5, SD:7.6},
+      {Age:11.5, c3:130.7, c10:135.6, c25:140.6, c50:145.5, c75:150.5, c90:155.6, c97:160.6, SD:7.3},
+      {Age:12.0, c3:133.2, c10:138.3, c25:143.3, c50:148.4, c75:153.5, c90:158.6, c97:163.7, SD:8.1},
+      {Age:12.5, c3:135.7, c10:141.0, c25:146.2, c50:151.4, c75:156.5, c90:161.7, c97:166.8, SD:7.9},
+      {Age:13.0, c3:138.3, c10:143.7, c25:149.0, c50:154.3, c75:159.5, c90:164.7, c97:169.9, SD:9.0},
+      {Age:13.5, c3:140.9, c10:146.4, c25:151.8, c50:157.2, c75:162.4, c90:167.6, c97:172.7, SD:8.4},
+      {Age:14.0, c3:143.4, c10:149.0, c25:154.5, c50:159.9, c75:165.1, c90:170.3, c97:175.4, SD:9.0},
+      {Age:14.5, c3:145.8, c10:151.5, c25:157.0, c50:162.3, c75:167.6, c90:172.7, c97:177.7, SD:7.8},
+      {Age:15.0, c3:148.0, c10:153.7, c25:159.2, c50:164.5, c75:169.7, c90:174.8, c97:179.7, SD:7.9},
+      {Age:15.5, c3:150.0, c10:155.7, c25:161.2, c50:166.5, c75:171.6, c90:176.5, c97:181.4, SD:6.6},
+      {Age:16.0, c3:151.8, c10:157.4, c25:162.9, c50:168.1, c75:173.1, c90:178.0, c97:182.7, SD:7.2},
+      {Age:16.5, c3:153.4, c10:159.1, c25:164.5, c50:169.6, c75:174.5, c90:179.3, c97:183.8, SD:6.7},
+      {Age:17.0, c3:155.0, c10:160.6, c25:165.9, c50:171.0, c75:175.8, c90:180.4, c97:184.8, SD:6.9},
+      {Age:17.5, c3:156.6, c10:162.1, c25:167.3, c50:172.3, c75:177.0, c90:181.5, c97:185.8, SD:6.1},
+      {Age:18.0, c3:158.1, c10:163.6, c25:168.7, c50:173.6, c75:178.2, c90:182.5, c97:186.7, SD:6.9}
+    ];
+
+    const boys_weight_data = [
+      {Age:5.0, c3:13.2, c10:14.3, c25:15.6, c50:17.1, c75:19.0, c90:21.3, c97:24.2, SD:3.2},
+      {Age:5.5, c3:13.8, c10:15.0, c25:16.5, c50:18.2, c75:20.3, c90:22.9, c97:26.1, SD:2.9},
+      {Age:6.0, c3:14.5, c10:15.8, c25:17.4, c50:19.3, c75:21.7, c90:24.6, c97:28.3, SD:3.6},
+      {Age:6.5, c3:15.3, c10:16.8, c25:18.6, c50:20.7, c75:23.3, c90:26.6, c97:30.8, SD:3.8},
+      {Age:7.0, c3:16.0, c10:17.6, c25:19.6, c50:21.9, c75:24.9, c90:28.6, c97:33.4, SD:4.2},
+      {Age:7.5, c3:16.7, c10:18.5, c25:20.7, c50:23.3, c75:26.6, c90:30.8, c97:36.2, SD:4.9},
+      {Age:8.0, c3:17.5, c10:19.5, c25:21.9, c50:24.8, c75:28.5, c90:33.2, c97:39.4, SD:5.7},
+      {Age:8.5, c3:18.3, c10:20.5, c25:23.2, c50:26.4, c75:30.5, c90:35.7, c97:42.6, SD:6.5},
+      {Age:9.0, c3:19.1, c10:21.5, c25:24.3, c50:27.9, c75:32.3, c90:38.0, c97:45.5, SD:6.3},
+      {Age:9.5, c3:19.9, c10:22.4, c25:25.6, c50:29.4, c75:34.3, c90:40.5, c97:48.6, SD:7.0},
+      {Age:10.0, c3:20.7, c10:23.5, c25:26.9, c50:31.1, c75:36.3, c90:43.0, c97:51.8, SD:7.9},
+      {Age:10.5, c3:21.6, c10:24.6, c25:28.3, c50:32.8, c75:38.5, c90:45.8, c97:55.2, SD:8.3},
+      {Age:11.0, c3:22.6, c10:25.9, c25:29.8, c50:34.7, c75:40.9, c90:48.7, c97:58.7, SD:8.9},
+      {Age:11.5, c3:23.8, c10:27.3, c25:31.6, c50:36.9, c75:43.5, c90:51.8, c97:62.5, SD:9.3},
+      {Age:12.0, c3:24.9, c10:28.7, c25:33.3, c50:39.0, c75:46.0, c90:54.8, c97:66.1, SD:10.0},
+      {Age:12.5, c3:26.1, c10:30.2, c25:35.1, c50:41.2, c75:48.6, c90:57.8, c97:69.5, SD:10.6},
+      {Age:13.0, c3:27.5, c10:31.8, c25:37.0, c50:43.3, c75:51.1, c90:60.7, c97:72.6, SD:11.3},
+      {Age:13.5, c3:29.0, c10:33.6, c25:39.1, c50:45.7, c75:53.8, c90:63.6, c97:75.6, SD:11.4},
+      {Age:14.0, c3:30.7, c10:35.5, c25:41.3, c50:48.2, c75:56.4, c90:66.3, c97:78.3, SD:12.1},
+      {Age:14.5, c3:32.6, c10:37.7, c25:43.7, c50:50.8, c75:59.1, c90:69.1, c97:80.9, SD:11.6},
+      {Age:15.0, c3:34.5, c10:39.8, c25:45.9, c50:53.1, c75:61.6, c90:71.5, c97:83.1, SD:12.1},
+      {Age:15.5, c3:36.1, c10:41.6, c25:47.9, c50:55.2, c75:63.6, c90:73.4, c97:84.7, SD:11.2},
+      {Age:16.0, c3:37.5, c10:43.1, c25:49.5, c50:56.8, c75:65.2, c90:74.8, c97:85.8, SD:12.2},
+      {Age:16.5, c3:38.7, c10:44.4, c25:50.9, c50:58.2, c75:66.6, c90:76.1, c97:86.8, SD:12.6},
+      {Age:17.0, c3:39.8, c10:45.6, c25:52.1, c50:59.5, c75:67.8, c90:77.1, c97:87.5, SD:12.3},
+      {Age:17.5, c3:40.8, c10:46.7, c25:53.2, c50:60.6, c75:68.7, c90:77.8, c97:88.0, SD:12.3},
+      {Age:18.0, c3:41.8, c10:47.7, c25:54.3, c50:61.6, c75:69.7, c90:78.6, c97:88.4, SD:11.3}
+    ];
+
+    const girls_height_data = [
+      {Age:5.0, c3:97.2, c10:100.5, c25:103.9, c50:107.5, c75:111.3, c90:115.2, c97:119.3, SD:5.4},
+      {Age:5.5, c3:99.8, c10:103.2, c25:106.8, c50:110.5, c75:114.4, c90:118.3, c97:122.5, SD:5.7},
+      {Age:6.0, c3:102.3, c10:106.0, c25:109.7, c50:113.5, c75:117.4, c90:121.5, c97:125.6, SD:5.8},
+      {Age:6.5, c3:104.9, c10:108.7, c25:112.5, c50:116.5, c75:120.5, c90:124.6, c97:128.7, SD:5.5},
+      {Age:7.0, c3:107.4, c10:111.4, c25:115.4, c50:119.4, c75:123.5, c90:127.7, c97:131.9, SD:6.1},
+      {Age:7.5, c3:110.0, c10:114.1, c25:118.2, c50:122.4, c75:126.6, c90:130.8, c97:135.0, SD:6.0},
+      {Age:8.0, c3:112.6, c10:116.8, c25:121.1, c50:125.4, c75:129.6, c90:133.9, c97:138.1, SD:6.2},
+      {Age:8.5, c3:115.2, c10:119.6, c25:124.0, c50:128.4, c75:132.7, c90:137.0, c97:141.3, SD:6.8},
+      {Age:9.0, c3:117.8, c10:122.4, c25:126.9, c50:131.4, c75:135.8, c90:140.2, c97:144.5, SD:6.9},
+      {Age:9.5, c3:120.5, c10:125.2, c25:129.9, c50:134.4, c75:138.9, c90:143.3, c97:147.6, SD:6.6},
+      {Age:10.0, c3:123.3, c10:128.1, c25:132.8, c50:137.4, c75:142.0, c90:146.4, c97:150.8, SD:7.8},
+      {Age:10.5, c3:126.1, c10:130.9, c25:135.7, c50:140.4, c75:145.0, c90:149.5, c97:153.9, SD:7.3},
+      {Age:11.0, c3:128.8, c10:133.7, c25:138.6, c50:143.3, c75:147.9, c90:152.4, c97:156.8, SD:7.9},
+      {Age:11.5, c3:131.5, c10:136.4, c25:141.2, c50:145.9, c75:150.6, c90:155.1, c97:159.6, SD:7.1},
+      {Age:12.0, c3:134.0, c10:138.9, c25:143.7, c50:148.4, c75:153.0, c90:157.5, c97:162.0, SD:7.0},
+      {Age:12.5, c3:136.3, c10:141.1, c25:145.8, c50:150.5, c75:155.1, c90:159.6, c97:164.1, SD:6.7},
+      {Age:13.0, c3:138.2, c10:142.9, c25:147.6, c50:152.2, c75:156.8, c90:161.3, c97:165.9, SD:6.9},
+      {Age:13.5, c3:139.9, c10:144.5, c25:149.1, c50:153.6, c75:158.2, c90:162.7, c97:167.2, SD:6.0},
+      {Age:14.0, c3:141.3, c10:145.8, c25:150.2, c50:154.7, c75:159.2, c90:163.7, c97:168.2, SD:6.6},
+      {Age:14.5, c3:142.4, c10:146.8, c25:151.1, c50:155.5, c75:160.0, c90:164.5, c97:169.0, SD:5.9},
+      {Age:15.0, c3:143.3, c10:147.5, c25:151.8, c50:156.1, c75:160.5, c90:165.0, c97:169.5, SD:6.6},
+      {Age:15.5, c3:144.1, c10:148.1, c25:152.3, c50:156.6, c75:160.9, c90:165.3, c97:169.8, SD:5.9},
+      {Age:16.0, c3:144.7, c10:148.6, c25:152.7, c50:156.9, c75:161.2, c90:165.6, c97:170.1, SD:6.1},
+      {Age:16.5, c3:145.2, c10:149.1, c25:153.1, c50:157.2, c75:161.4, c90:165.7, c97:170.2, SD:6.4},
+      {Age:17.0, c3:145.7, c10:149.5, c25:153.4, c50:157.4, c75:161.6, c90:165.9, c97:170.4, SD:6.5},
+      {Age:17.5, c3:146.2, c10:149.8, c25:153.6, c50:157.6, c75:161.7, c90:166.0, c97:170.5, SD:6.7},
+      {Age:18.0, c3:146.6, c10:150.2, c25:153.9, c50:157.8, c75:161.9, c90:166.1, c97:170.6, SD:6.6}
+    ];
+
+    const girls_weight_data = [
+      {Age:5.0, c3:12.3, c10:13.4, c25:14.8, c50:16.4, c75:18.5, c90:21.3, c97:25.0, SD:2.5},
+      {Age:5.5, c3:13.0, c10:14.3, c25:15.7, c50:17.6, c75:19.9, c90:22.9, c97:27.0, SD:3.5},
+      {Age:6.0, c3:13.7, c10:15.1, c25:16.7, c50:18.7, c75:21.3, c90:24.6, c97:29.1, SD:3.4},
+      {Age:6.5, c3:14.4, c10:15.9, c25:17.7, c50:19.9, c75:22.7, c90:26.3, c97:31.2, SD:4.1},
+      {Age:7.0, c3:15.1, c10:16.8, c25:18.7, c50:21.2, c75:24.2, c90:28.2, c97:33.4, SD:4.4},
+      {Age:7.5, c3:15.9, c10:17.7, c25:19.9, c50:22.5, c75:25.9, c90:30.1, c97:35.7, SD:4.8},
+      {Age:8.0, c3:16.7, c10:18.7, c25:21.1, c50:24.0, c75:27.6, c90:32.2, c97:38.1, SD:5.2},
+      {Age:8.5, c3:17.5, c10:19.7, c25:22.3, c50:25.5, c75:29.5, c90:34.4, c97:40.7, SD:6.4},
+      {Age:9.0, c3:18.5, c10:20.9, c25:23.7, c50:27.2, c75:31.5, c90:36.7, c97:43.4, SD:6.4},
+      {Age:9.5, c3:19.5, c10:22.1, c25:25.3, c50:29.0, c75:33.6, c90:39.3, c97:46.3, SD:6.9},
+      {Age:10.0, c3:20.7, c10:23.5, c25:26.9, c50:31.0, c75:36.0, c90:42.0, c97:49.4, SD:7.7},
+      {Age:10.5, c3:22.0, c10:25.1, c25:28.8, c50:33.2, c75:38.4, c90:44.8, c97:52.6, SD:8.3},
+      {Age:11.0, c3:23.3, c10:26.7, c25:30.7, c50:35.4, c75:41.0, c90:47.7, c97:55.9, SD:8.5},
+      {Age:11.5, c3:24.8, c10:28.4, c25:32.6, c50:37.6, c75:43.6, c90:50.6, c97:59.1, SD:9.1},
+      {Age:12.0, c3:26.2, c10:30.0, c25:34.5, c50:39.8, c75:46.0, c90:53.4, c97:62.1, SD:9.0},
+      {Age:12.5, c3:27.6, c10:31.6, c25:36.3, c50:41.8, c75:48.2, c90:55.8, c97:64.8, SD:9.7},
+      {Age:13.0, c3:28.9, c10:33.1, c25:37.9, c50:43.6, c75:50.2, c90:57.9, c97:67.1, SD:9.4},
+      {Age:13.5, c3:30.2, c10:34.4, c25:39.4, c50:45.1, c75:51.8, c90:59.7, c97:69.0, SD:9.8},
+      {Age:14.0, c3:31.3, c10:35.6, c25:40.6, c50:46.4, c75:53.2, c90:61.1, c97:70.4, SD:9.6},
+      {Age:14.5, c3:32.3, c10:36.6, c25:41.7, c50:47.5, c75:54.3, c90:62.2, c97:71.4, SD:9.4},
+      {Age:15.0, c3:33.1, c10:37.5, c25:42.5, c50:48.4, c75:55.1, c90:62.9, c97:72.1, SD:9.6},
+      {Age:15.5, c3:34.0, c10:38.3, c25:43.3, c50:49.1, c75:55.8, c90:63.5, c97:72.5, SD:8.7},
+      {Age:16.0, c3:34.7, c10:39.1, c25:44.0, c50:49.7, c75:56.3, c90:64.0, c97:72.8, SD:8.7},
+      {Age:16.5, c3:35.5, c10:39.8, c25:44.7, c50:50.3, c75:56.9, c90:64.4, c97:73.1, SD:9.2},
+      {Age:17.0, c3:36.2, c10:40.5, c25:45.3, c50:50.9, c75:57.3, c90:64.7, c97:73.3, SD:8.8},
+      {Age:17.5, c3:36.9, c10:41.1, c25:46.0, c50:51.5, c75:57.8, c90:65.0, c97:73.4, SD:9.5},
+      {Age:18.0, c3:37.6, c10:41.8, c25:46.6, c50:52.0, c75:58.2, c90:65.3, c97:73.5, SD:10.2}
+    ];
+
+    let currentGender = 'Boys';
+    let growthChartInstance = null;
+
+    // Helper functions exact replica of Python logic
+    function findClosestRow(data, ageVal) {
+      let closest = data[0];
+      let minDiff = Math.abs(data[0].Age - ageVal);
+      for (let i = 1; i < data.length; i++) {
+        let diff = Math.abs(data[i].Age - ageVal);
+        if (diff < minDiff) {
+          minDiff = diff;
+          closest = data[i];
+        }
+      }
+      return closest;
+    }
+
+    function calculateSDScore(data, ageVal, value) {
+      const row = findClosestRow(data, ageVal);
+      const meanValue = row.c50;
+      const sd = row.SD;
+      return ((value - meanValue) / sd).toFixed(2);
+    }
+
+    function determineCentileRange(data, ageVal, value) {
+      const row = findClosestRow(data, ageVal);
+      const centilePairs = [
+        ['3', '10', row.c3, row.c10],
+        ['10', '25', row.c10, row.c25],
+        ['25', '50', row.c25, row.c50],
+        ['50', '75', row.c50, row.c75],
+        ['75', '90', row.c75, row.c90],
+        ['90', '97', row.c90, row.c97]
+      ];
+
+      for (let [c1, c2, val1, val2] of centilePairs) {
+        if (value >= val1 && value <= val2) {
+          return `between ${c1}th and ${c2}th centile`;
+        }
+      }
+
+      if (value < row.c3) return "below the 3rd centile";
+      if (value > row.c97) return "above the 97th centile";
+      return "at or above 97th centile";
+    }
+
+    function calculateAgeForValue(data, value) {
+      let closestAge = data[0].Age;
+      let minDiff = Math.abs(data[0].c50 - value);
+      for (let i = 1; i < data.length; i++) {
+        let diff = Math.abs(data[i].c50 - value);
+        if (diff < minDiff) {
+          minDiff = diff;
+          closestAge = data[i].Age;
+        }
+      }
+      return closestAge.toFixed(1);
+    }
+
+    function calculateMPH(fatherHeight, motherHeight, gender) {
+      if (gender === 'Boys') {
+        return ((fatherHeight + motherHeight + 13) / 2).toFixed(1);
+      } else {
+        return ((fatherHeight + motherHeight - 13) / 2).toFixed(1);
+      }
+    }
+
+    function calculateTargetHeight(mph, gender, data) {
+      const row18 = data.find(d => d.Age === 18.0) || data[data.length - 1];
+      const h50_18 = row18.c50;
+      const th = parseFloat(mph) + ((h50_18 - parseFloat(mph)) * 0.2);
+      return th.toFixed(1);
+    }
+
+    function setGender(gender) {
+      currentGender = gender;
+      const btnBoy = document.getElementById('btn-boy');
+      const btnGirl = document.getElementById('btn-girl');
+      const chartTitle = document.getElementById('chart-main-title');
+
+      if (gender === 'Boys') {
+        btnBoy.className = 'gender-btn active-boy';
+        btnGirl.className = 'gender-btn';
+        chartTitle.innerText = 'Growth Chart for Boys (Height & Weight)';
+      } else {
+        btnBoy.className = 'gender-btn';
+        btnGirl.className = 'gender-btn active-girl';
+        chartTitle.innerText = 'Growth Chart for Girls (Height & Weight)';
+      }
+      updateAll();
+    }
+
+    // Sync input box and slider
+    function syncInputSlider(inputId, sliderId, displayId, suffix) {
+      const inp = document.getElementById(inputId);
+      const sld = document.getElementById(sliderId);
+      const disp = document.getElementById(displayId);
+
+      inp.addEventListener('input', () => {
+        sld.value = inp.value;
+        disp.innerText = inp.value + suffix;
+        updateAll();
+      });
+
+      sld.addEventListener('input', () => {
+        inp.value = sld.value;
+        disp.innerText = sld.value + suffix;
+        updateAll();
+      });
+    }
+
+    syncInputSlider('input-age', 'slider-age', 'val-age', ' yrs');
+    syncInputSlider('input-height', 'slider-height', 'val-height', ' cm');
+    syncInputSlider('input-weight', 'slider-weight', 'val-weight', ' kg');
+    syncInputSlider('input-father', 'slider-father', 'val-father', ' cm');
+    syncInputSlider('input-mother', 'slider-mother', 'val-mother', ' cm');
+
+    function updateAll() {
+      const age = parseFloat(document.getElementById('input-age').value);
+      const height = parseFloat(document.getElementById('input-height').value);
+      const weight = parseFloat(document.getElementById('input-weight').value);
+      const father = parseFloat(document.getElementById('input-father').value);
+      const mother = parseFloat(document.getElementById('input-mother').value);
+
+      const hData = currentGender === 'Boys' ? boys_height_data : girls_height_data;
+      const wData = currentGender === 'Boys' ? boys_weight_data : girls_weight_data;
+
+      // Calculations
+      const hSD = calculateSDScore(hData, age, height);
+      const wSD = calculateSDScore(wData, age, weight);
+      const hRange = determineCentileRange(hData, age, height);
+      const wRange = determineCentileRange(wData, age, weight);
+      const hAge = calculateAgeForValue(hData, height);
+      const wAge = calculateAgeForValue(wData, weight);
+      const mph = calculateMPH(father, mother, currentGender);
+      const th = calculateTargetHeight(mph, currentGender, hData);
+
+      // DOM updates
+      document.getElementById('res-height-sd').innerText = `${hSD >= 0 ? '+' : ''}${hSD} SD`;
+      document.getElementById('res-weight-sd').innerText = `${wSD >= 0 ? '+' : ''}${wSD} SD`;
+      document.getElementById('res-height-centile').innerText = hRange;
+      document.getElementById('res-weight-centile').innerText = wRange;
+      document.getElementById('res-height-age').innerText = `${hAge} years`;
+      document.getElementById('res-weight-age').innerText = `${wAge} years`;
+      document.getElementById('res-mph').innerText = `${mph} cm`;
+      document.getElementById('res-th').innerText = `${th} cm`;
+
+      updateChart(age, height, weight, hData, wData);
+    }
+
+    function updateChart(patientAge, patientHeight, patientWeight, hData, wData) {
+      const ages = hData.map(d => d.Age);
+      
+      const centileColors = [
+        '#FF6347', '#FF8C00', '#FFD700', '#32CD32', '#4682B4', '#6A5ACD', '#800080'
+      ];
+      const centileKeys = ['c3', 'c10', 'c25', 'c50', 'c75', 'c90', 'c97'];
+      const centileLabels = ['3rd', '10th', '25th', '50th', '75th', '90th', '97th'];
+
+      const datasets = [];
+
+      // Height Centile Curves (Solid lines)
+      centileKeys.forEach((key, idx) => {
+        datasets.push({
+          label: `Height ${centileLabels[idx]} Centile`,
+          data: ages.map((a, i) => ({ x: a, y: hData[i][key] })),
+          borderColor: centileColors[idx],
+          borderWidth: 1.8,
+          borderDash: [],
+          pointRadius: 0,
+          tension: 0.3,
+          yAxisID: 'y'
+        });
+      });
+
+      // Weight Centile Curves (Dashed lines)
+      centileKeys.forEach((key, idx) => {
+        datasets.push({
+          label: `Weight ${centileLabels[idx]} Centile`,
+          data: ages.map((a, i) => ({ x: a, y: wData[i][key] })),
+          borderColor: centileColors[idx],
+          borderWidth: 1.5,
+          borderDash: [5, 5],
+          pointRadius: 0,
+          tension: 0.3,
+          yAxisID: 'y'
+        });
+      });
+
+      // Patient Height Point
+      datasets.push({
+        label: `Patient Height (${patientHeight} cm @ ${patientAge} yrs)`,
+        data: [{ x: patientAge, y: patientHeight }],
+        backgroundColor: '#FF0000',
+        borderColor: '#ffffff',
+        borderWidth: 2,
+        pointRadius: 8,
+        pointHoverRadius: 10,
+        type: 'scatter',
+        yAxisID: 'y'
+      });
+
+      // Patient Weight Point
+      datasets.push({
+        label: `Patient Weight (${patientWeight} kg @ ${patientAge} yrs)`,
+        data: [{ x: patientAge, y: patientWeight }],
+        backgroundColor: '#0000FF',
+        borderColor: '#ffffff',
+        borderWidth: 2,
+        pointRadius: 8,
+        pointHoverRadius: 10,
+        type: 'scatter',
+        yAxisID: 'y'
+      });
+
+      const bgColor = currentGender === 'Boys' ? '#C9EBF9' : '#FFC0CB';
+
+      if (!growthChartInstance) {
+        const ctx = document.getElementById('growthChart').getContext('2d');
+        
+        // Custom background plugin
+        const chartBgPlugin = {
+          id: 'customCanvasBackgroundColor',
+          beforeDraw: (chart, args, options) => {
+            const {ctx} = chart;
+            ctx.save();
+            ctx.fillStyle = options.color || '#C9EBF9';
+            ctx.fillRect(0, 0, chart.width, chart.height);
+            ctx.restore();
+          }
+        };
+
+        growthChartInstance = new Chart(ctx, {
+          type: 'line',
+          data: { datasets: datasets },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: {
+              mode: 'nearest',
+              intersect: false
+            },
+            plugins: {
+              customCanvasBackgroundColor: {
+                color: bgColor
+              },
+              legend: {
+                position: 'right',
+                labels: {
+                  boxWidth: 14,
+                  font: { size: 11, family: 'Outfit, Inter, sans-serif' },
+                  color: '#1e293b'
+                }
+              },
+              tooltip: {
+                backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                titleFont: { size: 13, family: 'Outfit, Inter, sans-serif' },
+                bodyFont: { size: 12, family: 'Outfit, Inter, sans-serif' },
+                padding: 10,
+                cornerRadius: 8
+              }
+            },
+            scales: {
+              x: {
+                type: 'linear',
+                min: 5,
+                max: 18,
+                ticks: {
+                  stepSize: 1,
+                  color: '#334155',
+                  font: { weight: '600' }
+                },
+                title: {
+                  display: true,
+                  text: 'Age (years)',
+                  color: '#1e293b',
+                  font: { size: 14, weight: '700' }
+                },
+                grid: { color: 'rgba(0, 0, 0, 0.15)' }
+              },
+              y: {
+                type: 'linear',
+                min: 10,
+                max: 200,
+                ticks: {
+                  stepSize: 10,
+                  color: '#334155',
+                  font: { weight: '600' }
+                },
+                title: {
+                  display: true,
+                  text: 'Value (Height in cm / Weight in kg)',
+                  color: '#1e293b',
+                  font: { size: 14, weight: '700' }
+                },
+                grid: { color: 'rgba(0, 0, 0, 0.15)' }
+              }
+            }
+          },
+          plugins: [chartBgPlugin]
+        });
+      } else {
+        growthChartInstance.data.datasets = datasets;
+        growthChartInstance.options.plugins.customCanvasBackgroundColor.color = bgColor;
+        growthChartInstance.update();
+      }
+    }
+
+    // High resolution A4 PNG Export
+    function exportA4Chart() {
+      if (!growthChartInstance) return;
+      
+      const canvas = document.getElementById('growthChart');
+      const dataUrl = canvas.toDataURL('image/png', 1.0);
+      
+      const link = document.createElement('a');
+      link.download = `${currentGender.toLowerCase()}_growth_chart_clinical.png`;
+      link.href = dataUrl;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
+    // Initial render
+    window.addEventListener('DOMContentLoaded', () => {
+      updateAll();
+    });
+  </script>
+</body>
+</html>
